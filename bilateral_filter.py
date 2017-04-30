@@ -1,8 +1,81 @@
 import numpy as np
 from PIL import Image
 import sys
-import scipy.signal
+from skimage import color
 
+class colors():
+    
+    def compute_LAB(self):
+        try:
+            self.LAB = color.rgb2lab(self.RGB/255.0)
+        except:
+            self.LAB = np.dstack((self.RGB/255.0, 
+                        np.zeros_like(self.RGB), 
+                        np.zeros_like(self.RGB)))
+        
+    def compute_RGB(self):
+        self.RGB = color.lab2rgb(self.LAB) * 255.0
+        self.RGB = self.RGB.astype(np.uint8)
+          
+    @property
+    def R(self):
+        return self.RGB[..., 0]
+    
+    @property
+    def G(self):
+        return self.RGB[..., 1]
+    
+    @property
+    def B(self):
+        return self.RGB[..., 2]
+    
+    @property
+    def L(self):
+        return self.LAB[..., 0]
+    
+    @property
+    def A(self):
+        return self.LAB[..., 1]
+    
+    @property
+    def B(self):
+        return self.LAB[..., 2]
+    
+    @R.setter
+    def R(self, R):
+        self.RGB[..., 0] = R
+        
+    @G.setter
+    def G(self, G):
+        self.RGB[..., 1] = G
+    
+    @B.setter
+    def B(self, B):
+        self.RGB[..., 2] = B
+    
+    @L.setter
+    def L(self, L):
+        self.LAB[..., 0] = L
+        
+    @A.setter
+    def A(self, A):
+        self.LAB[..., 1] = A
+        
+    @B.setter
+    def B(self, B):
+        self.LAB[..., 2] = B
+        
+    
+    def __init__(self, picture):
+        self.RGB = np.array(picture)
+        
+        try:
+            if self.RGB.shape[2] != 3:
+                self.RGB = np.dstack((self.RGB, self.RGB, self.RGB))
+        except:
+            self.RGB = np.dstack((self.RGB, self.RGB, self.RGB))
+            
+        self.compute_LAB()
 
 def gaussian(x, sigma):
     return (1.0 / (2 * np.pi * (sigma ** 2))) * np.exp(- (x ** 2) / (2 * sigma ** 2))
@@ -31,19 +104,20 @@ def bilateral_filter(source, radius, std_i, std_s):
             W += w
             filtered_image += neighbour * w
 
-    return np.around(filtered_image / W).astype(np.uint8)
+    return filtered_image / W
 
 
 if __name__ == "__main__":
 
-    src = cv2.imread(str(sys.argv[1]), 0)
+    src = str(sys.argv[0])
+    #src = "original_image_grayscale.png"
     dest = "filtered_image_own.png"
 
     with Image.open(src) as pic:
 
-        pic = np.array(pic)
+        pic = colors(pic)
+        pic.L = bilateral_filter(pic.L, 4, 16.0, 12.0)
+        pic.compute_RGB()
 
-        filtered_image = bilateral_filter(pic, 5, 1, 3)
-
-        with Image.fromarray(filtered_image) as output:
-            output.save(dest, mode="L")
+        with Image.fromarray(pic.RGB) as output:
+            output.save(dest)
